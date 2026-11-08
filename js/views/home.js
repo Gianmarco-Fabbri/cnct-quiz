@@ -13,9 +13,9 @@
     if (!open) return '';
     const href = s.kind === 'exam' ? '#/mock' : '#/quiz';
     const where = s.kind === 'exam'
-      ? `mock exam in progress, ${Object.keys(s.answers).length}/${s.ids.length} answered`
+      ? `${data.term('exam')} in progress, ${Object.keys(s.answers).length}/${s.ids.length} answered`
       : `question ${s.index + 1} of ${s.ids.length}`;
-    return `<button class="mode resume" data-action="go" data-href="${href}"><strong>Resume: ${escapeHtml(s.title)}</strong>
+    return `<button class="mode resume" data-action="go" data-href="${href}"><strong>Resume: ${escapeHtml(data.sessionTitle(s.title))}</strong>
       <span>${escapeHtml(where)}</span></button><div class="spacer"></div>`;
   }
 
@@ -61,10 +61,11 @@
 
     $('#app').innerHTML = resumeHtml() + `<h1>Practise for the CNCT written exam</h1>
       <p class="muted">${f.questions} questions, +${formatNumber(f.correct, 0)} correct, ${formatNumber(f.wrong)} wrong, 0 blank.
-        In the exam: 1 h 10 min including setup. ${qs.length} questions in the bank.</p>
+        ${pub ? '1 h 10 min time.' : `In the exam: 1 h 10 min including setup. ${qs.length} questions in the bank.`}</p>
       <div class="mode-grid">
-        <button class="mode" data-action="go" data-href="#/practice"><strong>By unit or topic</strong><span>Choose unit, topic and how many questions</span></button>
-        <button class="mode" data-action="go" data-href="#/exam"><strong>Mock exam</strong><span>30 questions weighted by CFU, timer and real scoring</span></button>
+        <button class="mode" data-action="go" data-href="#/practice">${pub ? '<strong>By unit</strong><span>Choose the units and how many questions</span>'
+          : '<strong>By unit or topic</strong><span>Choose unit, topic and how many questions</span>'}</button>
+        <button class="mode" data-action="go" data-href="#/exam"><strong>${data.term('Exam')}</strong><span>30 questions weighted by CFU, timer and real scoring</span></button>
         <button class="mode" data-action="start-review" ${toReview ? '' : 'disabled'}><strong>Review mistakes (${toReview})</strong><span>A question leaves the review once you get it right twice in a row</span></button>
         ${pub ? '' : `<button class="mode" data-action="start-exam-questions"><strong>Exam questions only (${examOnly})</strong><span>The original questions of past exams</span></button>`}
         <button class="mode" data-action="start-flagged" ${flagged ? '' : 'disabled'}><strong>Flagged questions (${flagged})</strong><span>The ones you flagged with ☆</span></button>
@@ -73,7 +74,7 @@
         <div class="stat"><b>${tried}/${qs.length}</b><span>questions tried</span></div>
         <div class="stat"><b>${tried ? percent(rightAtLast, tried) + '%' : '—'}</b><span>correct at the last attempt</span></div>
         <div class="stat"><b>${toReview}</b><span>to review</span></div>
-        <div class="stat"><b>${exams.length ? formatNumber(exams[exams.length - 1].score) : '—'}</b><span>last mock exam${best !== null ? ' (best ' + formatNumber(best) + ')' : ''}</span></div>
+        <div class="stat"><b>${exams.length ? formatNumber(exams[exams.length - 1].score) : '—'}</b><span>last ${data.term('exam')}${best !== null ? ' (best ' + formatNumber(best) + ')' : ''}</span></div>
       </div>${unitTableHtml()}</section>
       <section class="card"><h2>Weakest topics</h2>${weakestTopicsHtml()}</section>
       <section class="card"><h2>Data</h2><p class="muted">Your progress stays in this browser. Export it to move it to another device or to keep a copy.</p>

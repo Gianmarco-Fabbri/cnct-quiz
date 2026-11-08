@@ -180,6 +180,14 @@ textarea { min-height: 110px; resize: vertical; }
 .choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
 .choice input { margin-top: 4px; }
 .choice:has(input:checked) { border-color: var(--accent); background: var(--accent-bg); }
+/* public practice page: unit checkboxes and the number of questions */
+.unit-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.count-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.count-choices .choice { align-items: center; min-height: 44px; }
+.count-choices .choice input { margin-top: 0; }
+.count-choices input[type="number"] {
+  font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; width: 5.5em; min-height: 36px;
+}
 
 .review-item { border-top: 1px solid var(--border); padding: 12px 0; }
 .review-item:first-child { border-top: 0; }

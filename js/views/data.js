@@ -10,7 +10,7 @@
   function progressHtml(pub) {
     const tried = Object.keys(store.state.questions).filter((id) => progress.attempts(id).length).length;
     return `<section class="card"><h2>Progress</h2>
-      <p>${tried} questions tried, ${store.state.mockExams.length} mock exams${pub ? '' : `, ${store.state.reports.length} reports`}. They stay in this browser:
+      <p>${tried} questions tried, ${store.state.mockExams.length} ${data.term('exams')}${pub ? '' : `, ${store.state.reports.length} reports`}. They stay in this browser:
         ${pub ? 'export them to move them to another device' : 'export them to move them (for example from the Mac to the iPhone)'} or to keep a copy.</p>
       <div class="actions"><button class="btn primary" data-action="export">Export progress (JSON)</button>
         <button class="btn" data-action="import">Import progress</button><button class="btn danger" data-action="reset">Reset progress</button></div>
@@ -33,9 +33,10 @@
     return h + '</section>';
   }
 
-  const settingsHtml = () => `<section class="card"><h2>Settings</h2><div class="fields">
+  // The public edition has no duration setting: its exam simulation always lasts as the exam.
+  const settingsHtml = (pub) => `<section class="card"><h2>Settings</h2><div class="fields">
       <label class="field">Theme<select id="s-theme"><option value="auto">Automatic (as the system)</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-      <label class="field">Default mock exam duration<select id="s-duration"><option value="60">60 minutes</option><option value="70">70 minutes (as in the exam)</option></select></label>
+      ${pub ? '' : `<label class="field">Default mock exam duration<select id="s-duration"><option value="60">60 minutes</option><option value="70">70 minutes (as in the exam)</option></select></label>`}
       <label class="field">Labs attended (for the total with the bonus)<select id="s-labs">${[0, 1, 2, 3, 4].map((n) => `<option>${n}</option>`).join('')}</select></label></div></section>`;
 
   const aboutHtml = () => `<section class="card"><h2>About</h2><p>Bank: ${data.active().length} questions (version ${escapeHtml(data.doc.version)}). 2026/27 slides for units 01–07;
@@ -46,15 +47,15 @@
   function render() {
     const pub = data.isPublic();
     const h = pub
-      ? '<h1>Progress and settings</h1>' + progressHtml(true) + settingsHtml()
-      : '<h1>Data and settings</h1>' + progressHtml(false) + reportsHtml() + settingsHtml() + aboutHtml();
+      ? '<h1>Progress and settings</h1>' + progressHtml(true) + settingsHtml(true)
+      : '<h1>Data and settings</h1>' + progressHtml(false) + reportsHtml() + settingsHtml(false) + aboutHtml();
     $('#app').innerHTML = h;
     const settings = store.state.settings;
     $('#s-theme').value = settings.theme;
-    $('#s-duration').value = String(settings.duration || 60);
+    if ($('#s-duration')) $('#s-duration').value = String(settings.duration || 60);
     $('#s-labs').value = String(settings.labs || 0);
     $('#s-theme').onchange = (e) => { settings.theme = e.target.value; store.save(); ui.applyTheme(); };
-    $('#s-duration').onchange = (e) => { settings.duration = Number(e.target.value); store.save(); };
+    if ($('#s-duration')) $('#s-duration').onchange = (e) => { settings.duration = Number(e.target.value); store.save(); };
     $('#s-labs').onchange = (e) => { settings.labs = Number(e.target.value); store.save(); };
   }
 
@@ -87,7 +88,9 @@
     export: exportProgress,
     'export-reports': exportReports,
     import: () => { const input = $('#import-file'); input.value = ''; input.click(); },
-    reset: () => ui.confirm('Delete all the progress, mock exams and reports saved in this browser? Export them first if you want a copy.', 'Reset', () => {
+    reset: () => ui.confirm(data.isPublic()
+      ? 'Delete all the progress and exam simulations saved in this browser? Export them first if you want a copy.'
+      : 'Delete all the progress, mock exams and reports saved in this browser? Export them first if you want a copy.', 'Reset', () => {
       store.reset();
       ui.applyTheme();
       ui.toast('Progress reset.');

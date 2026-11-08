@@ -4,7 +4,7 @@
  * ('?' for "don't know"). In review mode a question goes back in the queue until it is right twice in a row. */
 (function (CNCT) {
   'use strict';
-  const { $, escapeHtml, shuffle, percent } = CNCT.util;
+  const { $, $$, escapeHtml, shuffle, percent } = CNCT.util;
   const { store, data, progress, ui, actions } = CNCT;
   const go = (hash, replace) => CNCT.router.go(hash, replace);
   const MAX_REVIEW_QUEUE = 400;
@@ -20,20 +20,19 @@
         (o.which === 'flagged' && progress.isFlagged(q.id)) ||
         (o.which === 'weak' && q.status === 'weak')));
   }
-  // The public edition has no origin select (and no origin in its data).
-  const readFilters = () => ({ unit: $('#f-unit').value, topic: $('#f-topic').value, origin: $('#f-origin') ? $('#f-origin').value : '', which: $('#f-which').value });
+  const readFilters = () => ({ unit: $('#f-unit').value, topic: $('#f-topic').value, origin: $('#f-origin').value, which: $('#f-which').value });
 
   function setup(params) {
+    if (data.isPublic()) { setupPublic(params); return; }
     const unit = params.get('unit') || '';
     const topic = params.get('topic') || '';
     let h = `<h1>Practice by unit or topic</h1><section class="card"><div class="fields">
       <label class="field">Unit<select id="f-unit"><option value="">All units</option>`;
     data.unitIds().forEach((u) => { h += `<option value="${u}" ${u === unit ? 'selected' : ''}>${u} ${escapeHtml(data.unitName(u))}</option>`; });
-    const pub = data.isPublic();
     h += `</select></label><label class="field">Topic<select id="f-topic"></select></label>
-      ${pub ? '' : `<label class="field">Origin<select id="f-origin"><option value="">All</option><option value="exam">Exam questions only</option><option value="created">Created questions only</option></select></label>`}
+      <label class="field">Origin<select id="f-origin"><option value="">All</option><option value="exam">Exam questions only</option><option value="created">Created questions only</option></select></label>
       <label class="field">Which<select id="f-which"><option value="all">All</option><option value="unseen">Never tried</option><option value="review">To review</option>
-        <option value="wrong">Wrong at least once</option><option value="flagged">Flagged</option>${pub ? '' : '<option value="weak">Weak only</option>'}</select></label>
+        <option value="wrong">Wrong at least once</option><option value="flagged">Flagged</option><option value="weak">Weak only</option></select></label>
       <label class="field">How many<select id="f-count"><option value="10">10</option><option value="20" selected>20</option><option value="30">30</option><option value="0">All</option></select></label>
       <label class="field">Order<select id="f-order"><option value="random">Random</option><option value="bank">As in the bank</option></select></label>
       </div><p id="f-matches" class="muted" style="margin-top:12px"></p>
@@ -51,9 +50,63 @@
     };
     fillTopics(topic);
     $('#f-unit').onchange = () => { fillTopics(''); count(); };
-    ['#f-topic', '#f-origin', '#f-which', '#f-count'].forEach((s) => { if ($(s)) $(s).onchange = count; });
+    ['#f-topic', '#f-origin', '#f-which', '#f-count'].forEach((s) => { $(s).onchange = count; });
     count();
   }
+
+  // ---------------------------------------------------------------- public setup
+  // The public edition: any set of units, 10, 20 or 30 questions or a custom number up to MAX_COUNT, always at random.
+  const MAX_COUNT = 60;
+  function readPublic() {
+    const units = $$('input[name="f-units"]:checked').map((el) => el.value);
+    const choice = ($('input[name="f-count"]:checked') || {}).value;
+    const custom = Number($('#f-custom').value);
+    const count = choice === 'custom' ? (Number.isInteger(custom) && custom >= 1 && custom <= MAX_COUNT ? custom : null) : Number(choice);
+    return { units, count, pool: data.active().filter((q) => units.includes(q.unit)) };
+  }
+  function countPublic() {
+    const { units, count, pool } = readPublic();
+    let message;
+    if (!units.length) message = 'Choose at least one unit.';
+    else if (!count) message = `Enter a number from 1 to ${MAX_COUNT}.`;
+    else message = `${pool.length} questions in the chosen units; you will get ${Math.min(count, pool.length)}, in random order.`;
+    $('#f-matches').textContent = message;
+    $('#f-start').disabled = !units.length || !count || !pool.length;
+  }
+  function setupPublic(params) {
+    const chosen = (params.get('unit') || '').split(',').filter((u) => data.doc.units[u]);
+    let h = `<h1>Practice by unit</h1><section class="card">
+      <div class="question-head"><h2 style="margin:0">Units</h2><span class="actions" style="margin:0">
+        <button class="btn small" data-action="units-all">All</button><button class="btn small" data-action="units-none">None</button></span></div>
+      <div class="unit-choices">`;
+    data.unitIds().forEach((u) => {
+      const n = data.active().filter((q) => q.unit === u).length;
+      h += `<label class="choice"><input type="checkbox" name="f-units" value="${u}" ${!chosen.length || chosen.includes(u) ? 'checked' : ''}>
+        <span>${u} ${escapeHtml(data.unitName(u))} <span class="muted">(${n})</span></span></label>`;
+    });
+    h += '</div><h2 style="margin-top:16px">Questions</h2><div class="count-choices">';
+    [10, 20, 30].forEach((n) => {
+      h += `<label class="choice"><input type="radio" name="f-count" value="${n}" ${n === 20 ? 'checked' : ''}><span>${n}</span></label>`;
+    });
+    h += `<label class="choice"><input type="radio" name="f-count" value="custom"><span>Custom</span>
+        <input type="number" id="f-custom" min="1" max="${MAX_COUNT}" step="1" inputmode="numeric" placeholder="1–${MAX_COUNT}" aria-label="Number of questions, from 1 to ${MAX_COUNT}"></label></div>
+      <p id="f-matches" class="muted" style="margin-top:12px"></p>
+      <div class="actions"><button class="btn primary" data-action="start-practice" id="f-start">Start</button></div></section>`;
+    $('#app').innerHTML = h;
+    $$('input[name="f-units"], input[name="f-count"]').forEach((el) => { el.onchange = countPublic; });
+    const custom = $('#f-custom');
+    custom.onfocus = () => { $('input[name="f-count"][value="custom"]').checked = true; countPublic(); };
+    custom.oninput = countPublic;
+    countPublic();
+  }
+  function startPublic() {
+    const { units, count, pool } = readPublic();
+    if (!units.length || !count) return;
+    const all = units.length === data.unitIds().length;
+    const title = all ? 'All units' : units.length === 1 ? `Unit ${units[0]}` : `Units ${units.join(', ')}`;
+    start(shuffle(pool.map((q) => q.id)).slice(0, count), title);
+  }
+  const setUnits = (on) => { $$('input[name="f-units"]').forEach((el) => { el.checked = on; }); countPublic(); };
 
   // ---------------------------------------------------------------- session
   function start(ids, title, options, replace) {
@@ -179,6 +232,7 @@
   const idsWhere = (pred) => shuffle(data.active().filter(pred).map((q) => q.id));
   Object.assign(actions, {
     'start-practice': () => {
+      if (data.isPublic()) { startPublic(); return; }
       const o = readFilters();
       let ids = filter(o).map((q) => q.id);
       if ($('#f-order').value === 'random') ids = shuffle(ids);
@@ -186,6 +240,8 @@
       if (n) ids = ids.slice(0, n);
       start(ids, o.topic || (o.unit ? `Unit ${o.unit}` : 'Practice'), { review: o.which === 'review' });
     },
+    'units-all': () => setUnits(true),
+    'units-none': () => setUnits(false),
     'start-review': () => start(idsWhere((q) => progress.needsReview(q.id)), 'Review mistakes', { review: true }),
     'start-exam-questions': () => start(idsWhere((q) => q.origin === 'exam'), 'Exam questions'),
     'start-flagged': () => start(idsWhere((q) => progress.isFlagged(q.id)), 'Flagged questions'),

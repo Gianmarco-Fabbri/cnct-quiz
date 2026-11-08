@@ -34,6 +34,14 @@
   }
 
   const isPublic = () => !!(data.doc && data.doc.public);
+  // Names that differ in the public edition, which says "exam simulation" instead of "mock exam".
+  const TERMS = {
+    local: { exam: 'mock exam', Exam: 'Mock exam', exams: 'mock exams', Exams: 'Mock exams' },
+    public: { exam: 'exam simulation', Exam: 'Exam simulation', exams: 'exam simulations', Exams: 'Exam simulations' },
+  };
+  const term = (key) => TERMS[isPublic() ? 'public' : 'local'][key];
+  // Mock exams saved before the rename keep their old title in localStorage: show them with the new name.
+  const sessionTitle = (t) => (isPublic() && t === 'Random mock exam' ? 'Exam simulation' : t);
   const active = () => data.doc.questions.filter((q) => q.status !== 'removed');
   const unitIds = () => Object.keys(data.doc.units).sort(); // sorted: "10" would otherwise come before "01"
   const unitName = (u) => (data.doc.units[u] ? data.doc.units[u].name : u);
@@ -73,6 +81,6 @@
     return s;
   }
 
-  Object.assign(data, { load, isPublic, active, unitIds, unitName, mockExamUnit, topicsOf, pdfUrl, mockExamPdfUrl, referencesHtml, badgesHtml });
+  Object.assign(data, { load, isPublic, term, sessionTitle, active, unitIds, unitName, mockExamUnit, topicsOf, pdfUrl, mockExamPdfUrl, referencesHtml, badgesHtml });
   CNCT.data = data;
 })(window.CNCT = window.CNCT || {});
