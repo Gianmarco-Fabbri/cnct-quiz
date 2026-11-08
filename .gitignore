@@ -1,0 +1,13 @@
+# macOS and editors
+.DS_Store
+*.swp
+.vscode/
+.idea/
+node_modules/
+
+# Never published: course material and local tooling
+*.pdf
+ExamMaterial/
+CLAUDE.md
+.claude/
+tests/
