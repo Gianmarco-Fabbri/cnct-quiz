@@ -1,6 +1,6 @@
 /* Keyboard shortcuts.
  * Practice: 1–n answer, 0 don't know, Enter next, S flag.
- * Mock exam: 1–n choose (again to clear), 0 or Backspace clear, Enter or → next, ← previous, D unsure.
+ * Exam simulation: 1–n choose (again to clear), 0 or Backspace clear, Enter or → next, ← previous, D unsure.
  * Summary: Enter goes home. Escape closes a dialog. */
 (function (CNCT) {
   'use strict';

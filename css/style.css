@@ -116,26 +116,12 @@ main { max-width: 820px; margin: 0 auto; padding: 16px; outline: none; }
 .feedback .outcome.correct { color: var(--ok); }
 .feedback .outcome.wrong { color: var(--ko); }
 .feedback p { margin: 6px 0; }
-.feedback details { margin: 8px 0; font-size: .92rem; }
-.feedback summary { cursor: pointer; color: var(--muted); }
-.feedback details ul { margin: 6px 0; padding-left: 1.3em; }
-.note { background: var(--warn-bg); color: var(--text); border-left: 3px solid var(--warn); padding: 8px 10px; border-radius: 6px; }
-.note.neutral { background: var(--accent-bg); border-left-color: var(--accent); }
-
-.badge { display: inline-block; font-size: .75rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin: 2px 4px 2px 0; white-space: nowrap; }
-.badge.exam { color: var(--accent); border-color: var(--accent); }
-.badge.created { color: var(--muted); }
-.badge.weak { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); }
-.badge.new { color: var(--ok); border-color: var(--ok); }
-.badge.old-slides { color: var(--muted); border-style: dashed; }
-
-.ref a { white-space: nowrap; }
 .flag { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; padding: 4px 10px; font: inherit; font-size: .9rem; min-height: 34px; }
 .flag.on { color: var(--warn); border-color: var(--warn); }
 .shortcuts { color: var(--muted); font-size: .82rem; margin-top: 10px; }
 kbd { font: .8rem ui-monospace, Menlo, monospace; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
 
-/* mock exam */
+/* exam simulation */
 .exam-bar { position: sticky; top: 57px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg); padding: 8px 0; margin-bottom: 6px; }
 .timer { font: 700 1.35rem ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
 .timer.low { color: var(--ko); }

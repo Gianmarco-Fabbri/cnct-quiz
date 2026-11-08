@@ -1,5 +1,4 @@
-/* Shared interface pieces: toast messages, the modal dialog, confirmations, the "report a problem" dialog,
- * file downloads and the light/dark theme. */
+/* Shared interface pieces: toast messages, the modal dialog, confirmations, file downloads and the light/dark theme. */
 (function (CNCT) {
   'use strict';
   const { $, escapeHtml } = CNCT.util;
@@ -34,24 +33,6 @@
     (choice) => { closeModal(); if (choice === 'yes') onYes(); });
   }
 
-  function reportProblem(id) {
-    const q = CNCT.data.byId[id];
-    openModal(`<h2>Report a problem · question ${escapeHtml(id)}</h2>
-      <p class="muted">${escapeHtml(q.text.slice(0, 160))}${q.text.length > 160 ? '…' : ''}</p>
-      <label class="field">What is wrong? (It stays in this browser; you find it in Data and export it with your progress.)
-      <textarea id="report-text" placeholder="E.g. the cited slide does not say this; I think b is also correct…"></textarea></label>
-      <div class="actions"><button class="btn" data-modal="no">Cancel</button><button class="btn primary" data-modal="yes">Save report</button></div>`,
-    (choice, box) => {
-      if (choice === 'no') { closeModal(); return; }
-      const text = $('#report-text', box).value.trim();
-      if (!text) { toast('Write first what is wrong.'); return; }
-      CNCT.store.state.reports.push({ id, t: Date.now(), text, dataVersion: CNCT.data.doc.version });
-      CNCT.store.save();
-      closeModal();
-      toast('Report saved. You find it in Data.');
-    });
-  }
-
   function download(fileName, obj) {
     const blob = new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -80,5 +61,5 @@
     toast('Theme: ' + s.theme);
   }
 
-  CNCT.ui = { toast, openModal, closeModal, isModalOpen, confirm, reportProblem, download, applyTheme, cycleTheme, THEMES };
+  CNCT.ui = { toast, openModal, closeModal, isModalOpen, confirm, download, applyTheme, cycleTheme, THEMES };
 })(window.CNCT = window.CNCT || {});

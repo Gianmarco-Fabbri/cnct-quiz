@@ -1,13 +1,10 @@
-/* Persistent state in localStorage: per-question progress, problem reports, finished mock exams and settings,
- * plus the session in progress (a practice run or a mock exam).
- * Data saved by the earlier Italian version of the site (cnct2026.stato.v1) is converted once, on first load. */
+/* Persistent state in localStorage: per-question progress, finished exam simulations and settings,
+ * plus the session in progress (a practice run or an exam simulation). */
 (function (CNCT) {
   'use strict';
 
   const STATE_KEY = 'cnct2026.state.v1';
   const SESSION_KEY = 'cnct2026.session.v1';
-  const LEGACY_STATE_KEY = 'cnct2026.stato.v1';
-  const LEGACY_SESSION_KEY = 'cnct2026.sessione.v1';
   const EXPORT_APP = 'cnct-quiz';
 
   const store = { state: null, session: null, STATE_KEY, SESSION_KEY };
@@ -24,8 +21,9 @@
   }
   function remove(key) { try { localStorage.removeItem(key); } catch (e) { /* nothing to do */ } }
 
+  // reports: notes on questions saved by an earlier version of the site. Not shown, but kept so that they are not lost.
   function emptyState() {
-    return { version: 1, questions: {}, reports: [], mockExams: [], settings: { theme: 'auto', duration: 60, labs: 0 } };
+    return { version: 1, questions: {}, reports: [], mockExams: [], settings: { theme: 'auto', labs: 0 } };
   }
   function normalize(s) {
     const v = emptyState();
@@ -37,38 +35,8 @@
     return v;
   }
 
-  // ---- conversion from the Italian version
-  const LEGACY_MODES = { pratica: 'practice', ripasso: 'review', sim: 'exam' };
-  const LEGACY_THEMES = { auto: 'auto', chiaro: 'light', scuro: 'dark' };
-  const legacyTitle = (t) => String(t || '').replace(/^Simulazione casuale$/, 'Random mock exam').replace(/^Simulazione (\d+)$/, 'Mock exam $1');
-  function fromLegacy(old) {
-    const s = emptyState();
-    if (!old || typeof old !== 'object') return s;
-    Object.keys(old.domande || {}).forEach((id) => {
-      const x = old.domande[id] || {};
-      s.questions[id] = { attempts: (x.t || []).map(([t, ok, mode]) => [t, ok, LEGACY_MODES[mode] || mode]), flagged: !!x.s };
-    });
-    s.reports = (old.segnalazioni || []).map((x) => ({ id: x.id, t: x.t, text: x.testo, dataVersion: x.versione_dati }));
-    s.mockExams = (old.simulazioni || []).map((x) => ({
-      t: x.t, title: legacyTitle(x.titolo), score: x.punteggio, correct: x.giuste, wrong: x.sbagliate, blank: x.nonDate,
-      durationSec: x.durataSec, ids: x.ids, answers: x.risposte,
-    }));
-    const old_ = old.impostazioni || {};
-    s.settings = { theme: LEGACY_THEMES[old_.tema] || 'auto', duration: old_.durata || 60, labs: old_.lab || 0 };
-    return s;
-  }
-
   function load() {
-    let saved = read(STATE_KEY);
-    if (!saved) {
-      const legacy = read(LEGACY_STATE_KEY);
-      if (legacy) {
-        saved = fromLegacy(legacy);
-        if (write(STATE_KEY, saved)) remove(LEGACY_STATE_KEY);
-      }
-    }
-    remove(LEGACY_SESSION_KEY); // a session left open in the Italian version is not carried over
-    store.state = normalize(saved);
+    store.state = normalize(read(STATE_KEY));
     store.session = read(SESSION_KEY);
   }
   const reloadState = () => { store.state = normalize(read(STATE_KEY)); };
@@ -78,13 +46,11 @@
 
   // ---- export and import
   const exportPayload = (dataVersion) => ({ app: EXPORT_APP, exported: new Date().toISOString(), dataVersion, state: store.state });
-  // Accepts the current export format and the one of the Italian version.
   function parseExport(json) {
     if (json && json.app === EXPORT_APP && json.state && typeof json.state.questions === 'object') return normalize(json.state);
-    if (json && json.app === 'cnct2026' && json.stato && typeof json.stato.domande === 'object') return normalize(fromLegacy(json.stato));
     return null;
   }
-  // Adds the imported data to the current state without duplicating attempts, reports or mock exams.
+  // Adds the imported data to the current state without duplicating attempts or exam simulations.
   function merge(incoming) {
     let added = 0;
     const questions = store.state.questions;
@@ -106,6 +72,6 @@
     return added;
   }
 
-  Object.assign(store, { load, reloadState, save, saveSession, reset, emptyState, normalize, fromLegacy, exportPayload, parseExport, merge });
+  Object.assign(store, { load, reloadState, save, saveSession, reset, emptyState, normalize, exportPayload, parseExport, merge });
   CNCT.store = store;
 })(window.CNCT = window.CNCT || {});

@@ -1,4 +1,4 @@
-/* Mock exam: the setup page with the history, the timed exam and the result with the correction.
+/* Exam simulation: the setup page with the history, the timed exam and the result with the correction.
  * Session: { kind: 'exam', title, ids, index, orders, answers, doubts, start, duration, submitted, result }.
  * As in the real exam, answers can be changed or cleared until submission and solutions appear only at the end. */
 (function (CNCT) {
@@ -19,7 +19,7 @@
   function historyHtml() {
     const done = store.state.mockExams.slice().reverse().slice(0, 20);
     if (!done.length) return '';
-    let h = `<section class="card"><h2>${data.term('Exams')} taken</h2><div class="scroll"><table class="table"><thead><tr><th>Date</th><th>Exam</th>
+    let h = `<section class="card"><h2>Exam simulations taken</h2><div class="scroll"><table class="table"><thead><tr><th>Date</th><th>Exam</th>
       <th class="num">Score</th><th class="num">C / W / B</th><th class="num hide-mobile">Time</th></tr></thead><tbody>`;
     done.forEach((x) => {
       h += `<tr><td>${formatDate(x.t)}</td><td>${escapeHtml(data.sessionTitle(x.title))}</td><td class="num"><b>${formatNumber(x.score)}</b></td>
@@ -28,39 +28,14 @@
     return h + '</tbody></table></div><p class="muted" style="font-size:.85rem">C correct, W wrong, B blank.</p></section>';
   }
 
-  // Public edition: one choice only, the random exam simulation, always with the exam time (70 minutes).
-  function setupPublic() {
+  // One choice only: a new random exam simulation, always with the time of the exam (70 minutes).
+  function setup() {
     const f = data.doc.exam_format;
     $('#app').innerHTML = `<h1>Exam simulation</h1><section class="card">
       <p>${f.questions} new random questions at every attempt, with the topic weights of the real exam. Time: ${f.duration_min} minutes.</p>
       <label class="choice" style="margin-top:8px"><input type="checkbox" id="prefer-unseen" checked>
         <span>Pick first the questions you have never tried</span></label>
       <div class="actions"><button class="btn primary" data-action="start-exam" id="start-exam">Start the exam simulation</button></div></section>` + historyHtml();
-  }
-
-  function setup() {
-    if (data.isPublic()) { setupPublic(); return; }
-    const duration = store.state.settings.duration || 60;
-    const f = data.doc.exam_format;
-    let h = `<h1>Mock exam</h1><section class="card">
-      <p>${f.questions} questions, +${formatNumber(f.correct, 0)} correct, ${formatNumber(f.wrong)} wrong, 0 blank. You can leave questions blank,
-        go back and change an answer until you submit. Solutions appear only at the end, as in the exam.</p>
-      <h2 style="margin-top:12px">Questions</h2><div class="choices">
-        <label class="choice"><input type="radio" name="exam-type" value="random" checked><span><b>New random mock exam</b><br>
-          <span class="muted">30 questions weighted by CFU, with the quotas of the official guide; never a question without a correct option,
-          at most ${mockExam.MAX_WEAK} weak ones.</span></span></label>`;
-    (data.doc.mock_exams || []).forEach((exam, k) => {
-      h += `<label class="choice"><input type="radio" name="exam-type" value="${k}"><span><b>${escapeHtml(exam.name)}</b><br>
-        <span class="muted">The same questions as the <a href="${escapeHtml(data.mockExamPdfUrl(exam))}" target="_blank" rel="noopener" data-pdf>PDF</a>,
-        with the options shuffled.</span></span></label>`;
-    });
-    h += `</div><label class="choice" style="margin-top:8px"><input type="checkbox" id="prefer-unseen" checked>
-        <span>In the random mock exam, pick first the questions you have never tried</span></label>
-      <h2 style="margin-top:12px">Time</h2><div class="choices">
-        <label class="choice"><input type="radio" name="duration" value="60" ${duration === 60 ? 'checked' : ''}><span><b>60 minutes</b> <span class="muted">(for practice)</span></span></label>
-        <label class="choice"><input type="radio" name="duration" value="70" ${duration === 70 ? 'checked' : ''}><span><b>70 minutes</b> <span class="muted">(as in the exam, setup included)</span></span></label>
-      </div><div class="actions"><button class="btn primary" data-action="start-exam" id="start-exam">Start the mock exam</button></div></section>`;
-    $('#app').innerHTML = h + historyHtml();
   }
 
   function start(ids, title, duration) {
@@ -132,7 +107,7 @@
   function askSubmit() {
     const s = session();
     const missing = s.ids.length - Object.keys(s.answers).length;
-    ui.confirm(missing ? `${missing} answers missing: they count 0. Submit anyway?` : `Submit the ${data.term('exam')}?`, 'Submit', () => submit(false));
+    ui.confirm(missing ? `${missing} answers missing: they count 0. Submit anyway?` : 'Submit the exam simulation?', 'Submit', () => submit(false));
   }
   function submit(auto) {
     stopTimer();
@@ -150,7 +125,7 @@
     store.save();
     store.saveSession();
     go('#/result', true);
-    if (auto) ui.toast(`Time is up: ${data.term('exam')} submitted.`);
+    if (auto) ui.toast('Time is up: exam simulation submitted.');
   }
 
   // ---------------------------------------------------------------- result
@@ -186,7 +161,7 @@
     });
     const mistakes = r.wrong + r.blank;
     h += `</tbody></table></div><div class="actions">${mistakes ? `<button class="btn primary" data-action="practise-exam-mistakes">Practise the mistakes (${mistakes})</button>` : ''}
-      <button class="btn" data-action="go" data-href="#/exam">New ${data.term('exam')}</button><button class="btn" data-action="go" data-href="#/">Home</button></div></section>
+      <button class="btn" data-action="go" data-href="#/exam">New exam simulation</button><button class="btn" data-action="go" data-href="#/">Home</button></div></section>
       <section class="card"><div class="question-head"><h2 style="margin:0">Correction</h2>
         <a href="#/result${showAll ? '' : '?all=1'}">${showAll ? 'Mistakes and blanks only' : 'Show all'}</a></div>`;
     s.ids.forEach((id, k) => {
@@ -205,15 +180,7 @@
 
   // ---------------------------------------------------------------- actions
   Object.assign(actions, {
-    'start-exam': () => {
-      if (data.isPublic()) { start(mockExam.generate($('#prefer-unseen').checked), 'Exam simulation', data.doc.exam_format.duration_min); return; }
-      const type = ($('input[name="exam-type"]:checked') || {}).value || 'random';
-      const duration = Number(($('input[name="duration"]:checked') || {}).value || 60);
-      store.state.settings.duration = duration;
-      store.save();
-      if (type === 'random') start(mockExam.generate($('#prefer-unseen').checked), 'Random mock exam', duration);
-      else { const exam = data.doc.mock_exams[Number(type)]; start(exam.questions, exam.name, duration); }
-    },
+    'start-exam': () => start(mockExam.generate($('#prefer-unseen').checked), 'Exam simulation', data.doc.exam_format.duration_min),
     choose: (el) => choose(el.dataset.letter),
     move: (el) => move(Number(el.dataset.to)),
     'clear-answer': clearAnswer,
@@ -221,7 +188,7 @@
     'submit-exam': askSubmit,
     'practise-exam-mistakes': () => {
       const s = session();
-      CNCT.practice.start(s.ids.filter((id, k) => s.answers[k] !== data.byId[id].answer), `${data.term('Exam')} mistakes`);
+      CNCT.practice.start(s.ids.filter((id, k) => s.answers[k] !== data.byId[id].answer), 'Exam simulation mistakes');
     },
   });
 

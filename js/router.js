@@ -1,4 +1,4 @@
-/* Hash routing: #/path?query picks a view. Every render stops the mock exam timer; the exam view restarts it. */
+/* Hash routing: #/path?query picks a view. Every render stops the exam simulation timer; the exam view restarts it. */
 (function (CNCT) {
   'use strict';
   const { $$ } = CNCT.util;
@@ -21,7 +21,7 @@
     CNCT.exam.stopTimer();
     const { path, params } = current();
     $$('.menu a').forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + path));
-    // #/question/ID opens a single question as a one-question practice (used by the links in the reports).
+    // #/question/ID opens a single question as a one-question practice (to look a question up by its number).
     if (path.indexOf('/question/') === 0) {
       const id = decodeURIComponent(path.split('/')[2] || '');
       if (CNCT.data.byId[id]) { CNCT.practice.start([id], 'Question ' + id, {}, true); return; }

@@ -16,12 +16,10 @@
     ui.applyTheme();
     try { await data.load(); } catch (e) { data.doc = null; }
     if (!data.doc) {
-      $('#app').innerHTML = `<section class="card"><h1>Questions not found</h1><p><code>data/questions.js</code> is missing.
-        Run <code>python3 prepare_site.py</code> in <code>ExamMaterial/scripts</code>.</p></section>`;
+      $('#app').innerHTML = `<section class="card"><h1>Questions not found</h1><p>The question data could not be loaded. Reload the page to try again.</p></section>`;
       return;
     }
     dropInvalidSession();
-    if (data.isPublic()) { const link = $('.menu a[href="#/data"]'); if (link) link.textContent = 'Settings'; }
 
     document.addEventListener('click', (e) => {
       const el = e.target.closest('[data-action]');

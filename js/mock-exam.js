@@ -1,4 +1,4 @@
-/* Random mock exams weighted like the official guide: 30 questions, 5 per CFU.
+/* Random exam simulations weighted like the official guide: 30 questions, 5 per CFU.
  * Whole quotas add up to 28; the 2 remaining slots go to two of the units whose quota ends in .5. */
 (function (CNCT) {
   'use strict';

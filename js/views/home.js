@@ -13,7 +13,7 @@
     if (!open) return '';
     const href = s.kind === 'exam' ? '#/mock' : '#/quiz';
     const where = s.kind === 'exam'
-      ? `${data.term('exam')} in progress, ${Object.keys(s.answers).length}/${s.ids.length} answered`
+      ? `exam simulation in progress, ${Object.keys(s.answers).length}/${s.ids.length} answered`
       : `question ${s.index + 1} of ${s.ids.length}`;
     return `<button class="mode resume" data-action="go" data-href="${href}"><strong>Resume: ${escapeHtml(data.sessionTitle(s.title))}</strong>
       <span>${escapeHtml(where)}</span></button><div class="spacer"></div>`;
@@ -41,7 +41,7 @@
     let h = `<div class="scroll"><table class="table"><thead><tr><th>Topic</th><th>Unit</th><th class="num">Answers</th>
       <th class="num">Correct</th></tr></thead><tbody>`;
     topics.forEach((t) => {
-      h += `<tr class="clickable" data-action="go" data-href="#/practice?unit=${t.unit}&topic=${encodeURIComponent(t.topic)}">
+      h += `<tr class="clickable" data-action="go" data-href="#/practice?unit=${t.unit}" title="Practise on this unit">
         <td>${escapeHtml(t.topic)}</td><td>${t.unit}</td><td class="num">${t.answers}</td><td class="num">${percent(t.correct, t.answers)}%</td></tr>`;
     });
     return h + '</tbody></table></div>';
@@ -51,36 +51,32 @@
     const qs = data.active();
     const toReview = qs.filter((q) => progress.needsReview(q.id)).length;
     const flagged = qs.filter((q) => progress.isFlagged(q.id)).length;
-    const examOnly = qs.filter((q) => q.origin === 'exam').length;
     const tried = qs.filter((q) => progress.attempts(q.id).length).length;
     const rightAtLast = qs.filter((q) => progress.lastCorrect(q.id) === true).length;
     const exams = store.state.mockExams;
     const best = exams.length ? Math.max(...exams.map((e) => e.score)) : null;
     const f = data.doc.exam_format;
-    const pub = data.isPublic(); // public edition: no exam-only mode, no reports, no data file name
 
     $('#app').innerHTML = resumeHtml() + `<h1>Practise for the CNCT written exam</h1>
       <p class="muted">${f.questions} questions, +${formatNumber(f.correct, 0)} correct, ${formatNumber(f.wrong)} wrong, 0 blank.
-        ${pub ? '1 h 10 min time.' : `In the exam: 1 h 10 min including setup. ${qs.length} questions in the bank.`}</p>
+        1 h 10 min time.</p>
       <div class="mode-grid">
-        <button class="mode" data-action="go" data-href="#/practice">${pub ? '<strong>By unit</strong><span>Choose the units and how many questions</span>'
-          : '<strong>By unit or topic</strong><span>Choose unit, topic and how many questions</span>'}</button>
-        <button class="mode" data-action="go" data-href="#/exam"><strong>${data.term('Exam')}</strong><span>30 questions weighted by CFU, timer and real scoring</span></button>
+        <button class="mode" data-action="go" data-href="#/practice"><strong>By unit</strong><span>Choose the units and how many questions</span></button>
+        <button class="mode" data-action="go" data-href="#/exam"><strong>Exam simulation</strong><span>30 questions weighted by CFU, timer and real scoring</span></button>
         <button class="mode" data-action="start-review" ${toReview ? '' : 'disabled'}><strong>Review mistakes (${toReview})</strong><span>A question leaves the review once you get it right twice in a row</span></button>
-        ${pub ? '' : `<button class="mode" data-action="start-exam-questions"><strong>Exam questions only (${examOnly})</strong><span>The original questions of past exams</span></button>`}
         <button class="mode" data-action="start-flagged" ${flagged ? '' : 'disabled'}><strong>Flagged questions (${flagged})</strong><span>The ones you flagged with ☆</span></button>
       </div>
       <section class="card"><h2>Your progress</h2><div class="stats">
         <div class="stat"><b>${tried}/${qs.length}</b><span>questions tried</span></div>
         <div class="stat"><b>${tried ? percent(rightAtLast, tried) + '%' : '—'}</b><span>correct at the last attempt</span></div>
         <div class="stat"><b>${toReview}</b><span>to review</span></div>
-        <div class="stat"><b>${exams.length ? formatNumber(exams[exams.length - 1].score) : '—'}</b><span>last ${data.term('exam')}${best !== null ? ' (best ' + formatNumber(best) + ')' : ''}</span></div>
+        <div class="stat"><b>${exams.length ? formatNumber(exams[exams.length - 1].score) : '—'}</b><span>last exam simulation${best !== null ? ' (best ' + formatNumber(best) + ')' : ''}</span></div>
       </div>${unitTableHtml()}</section>
       <section class="card"><h2>Weakest topics</h2>${weakestTopicsHtml()}</section>
       <section class="card"><h2>Data</h2><p class="muted">Your progress stays in this browser. Export it to move it to another device or to keep a copy.</p>
         <div class="actions"><button class="btn" data-action="export">Export progress</button><button class="btn" data-action="import">Import progress</button>
-        <button class="btn" data-action="go" data-href="#/data">${pub ? 'Settings' : `Reports (${store.state.reports.length}) and settings`}</button></div></section>
-      <footer class="page-footer">${pub ? '' : `Data: questions.json version ${escapeHtml(data.doc.version)} · `}Keys: <kbd>1</kbd>–<kbd>4</kbd> answer ·
+        <button class="btn" data-action="go" data-href="#/data">Settings</button></div></section>
+      <footer class="page-footer">Keys: <kbd>1</kbd>–<kbd>4</kbd> answer ·
         <kbd>0</kbd> don't know · <kbd>Enter</kbd> next · <kbd>S</kbd> flag</footer>`;
   }
 

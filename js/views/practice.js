@@ -1,4 +1,5 @@
-/* Practice: the filter page, the question-by-question session with immediate feedback, and the summary.
+/* Practice: the setup page (any set of units, how many questions), the question-by-question session with immediate
+ * feedback, and the summary.
  * Session: { kind: 'practice', title, ids, index, orders, answers, review, created, stopped }.
  * orders[i] is the shuffled order of the option letters shown for question i; answers[i] is the chosen letter
  * ('?' for "don't know"). In review mode a question goes back in the queue until it is right twice in a row. */
@@ -8,64 +9,19 @@
   const { store, data, progress, ui, actions } = CNCT;
   const go = (hash, replace) => CNCT.router.go(hash, replace);
   const MAX_REVIEW_QUEUE = 400;
-
-  // ---------------------------------------------------------------- filters
-  function filter(o) {
-    return data.active().filter((q) => (!o.unit || q.unit === o.unit) && (!o.topic || q.topic === o.topic) &&
-      (!o.origin || q.origin === o.origin) && (
-        o.which === 'all' || !o.which ||
-        (o.which === 'unseen' && !progress.attempts(q.id).length) ||
-        (o.which === 'review' && progress.needsReview(q.id)) ||
-        (o.which === 'wrong' && progress.attempts(q.id).some((a) => !a[1])) ||
-        (o.which === 'flagged' && progress.isFlagged(q.id)) ||
-        (o.which === 'weak' && q.status === 'weak')));
-  }
-  const readFilters = () => ({ unit: $('#f-unit').value, topic: $('#f-topic').value, origin: $('#f-origin').value, which: $('#f-which').value });
-
-  function setup(params) {
-    if (data.isPublic()) { setupPublic(params); return; }
-    const unit = params.get('unit') || '';
-    const topic = params.get('topic') || '';
-    let h = `<h1>Practice by unit or topic</h1><section class="card"><div class="fields">
-      <label class="field">Unit<select id="f-unit"><option value="">All units</option>`;
-    data.unitIds().forEach((u) => { h += `<option value="${u}" ${u === unit ? 'selected' : ''}>${u} ${escapeHtml(data.unitName(u))}</option>`; });
-    h += `</select></label><label class="field">Topic<select id="f-topic"></select></label>
-      <label class="field">Origin<select id="f-origin"><option value="">All</option><option value="exam">Exam questions only</option><option value="created">Created questions only</option></select></label>
-      <label class="field">Which<select id="f-which"><option value="all">All</option><option value="unseen">Never tried</option><option value="review">To review</option>
-        <option value="wrong">Wrong at least once</option><option value="flagged">Flagged</option><option value="weak">Weak only</option></select></label>
-      <label class="field">How many<select id="f-count"><option value="10">10</option><option value="20" selected>20</option><option value="30">30</option><option value="0">All</option></select></label>
-      <label class="field">Order<select id="f-order"><option value="random">Random</option><option value="bank">As in the bank</option></select></label>
-      </div><p id="f-matches" class="muted" style="margin-top:12px"></p>
-      <div class="actions"><button class="btn primary" data-action="start-practice" id="f-start">Start</button></div></section>`;
-    $('#app').innerHTML = h;
-    const fillTopics = (selected) => {
-      $('#f-topic').innerHTML = '<option value="">All topics</option>' +
-        data.topicsOf($('#f-unit').value).map((t) => `<option ${t === selected ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('');
-    };
-    const count = () => {
-      const n = filter(readFilters()).length;
-      const wanted = Number($('#f-count').value);
-      $('#f-matches').textContent = n ? `${n} questions match; you will use ${wanted ? Math.min(wanted, n) : n}.` : 'No question matches the filters.';
-      $('#f-start').disabled = !n;
-    };
-    fillTopics(topic);
-    $('#f-unit').onchange = () => { fillTopics(''); count(); };
-    ['#f-topic', '#f-origin', '#f-which', '#f-count'].forEach((s) => { $(s).onchange = count; });
-    count();
-  }
-
-  // ---------------------------------------------------------------- public setup
-  // The public edition: any set of units, 10, 20 or 30 questions or a custom number up to MAX_COUNT, always at random.
   const MAX_COUNT = 60;
-  function readPublic() {
+
+  // ---------------------------------------------------------------- setup
+  // Any set of units; 10, 20 or 30 questions or a custom number up to MAX_COUNT; always in random order.
+  function readSetup() {
     const units = $$('input[name="f-units"]:checked').map((el) => el.value);
     const choice = ($('input[name="f-count"]:checked') || {}).value;
     const custom = Number($('#f-custom').value);
     const count = choice === 'custom' ? (Number.isInteger(custom) && custom >= 1 && custom <= MAX_COUNT ? custom : null) : Number(choice);
     return { units, count, pool: data.active().filter((q) => units.includes(q.unit)) };
   }
-  function countPublic() {
-    const { units, count, pool } = readPublic();
+  function updateCount() {
+    const { units, count, pool } = readSetup();
     let message;
     if (!units.length) message = 'Choose at least one unit.';
     else if (!count) message = `Enter a number from 1 to ${MAX_COUNT}.`;
@@ -73,7 +29,8 @@
     $('#f-matches').textContent = message;
     $('#f-start').disabled = !units.length || !count || !pool.length;
   }
-  function setupPublic(params) {
+  // #/practice?unit=03 (from the unit table of the home page) starts with that unit only; otherwise all are checked.
+  function setup(params) {
     const chosen = (params.get('unit') || '').split(',').filter((u) => data.doc.units[u]);
     let h = `<h1>Practice by unit</h1><section class="card">
       <div class="question-head"><h2 style="margin:0">Units</h2><span class="actions" style="margin:0">
@@ -93,20 +50,20 @@
       <p id="f-matches" class="muted" style="margin-top:12px"></p>
       <div class="actions"><button class="btn primary" data-action="start-practice" id="f-start">Start</button></div></section>`;
     $('#app').innerHTML = h;
-    $$('input[name="f-units"], input[name="f-count"]').forEach((el) => { el.onchange = countPublic; });
+    $$('input[name="f-units"], input[name="f-count"]').forEach((el) => { el.onchange = updateCount; });
     const custom = $('#f-custom');
-    custom.onfocus = () => { $('input[name="f-count"][value="custom"]').checked = true; countPublic(); };
-    custom.oninput = countPublic;
-    countPublic();
+    custom.onfocus = () => { $('input[name="f-count"][value="custom"]').checked = true; updateCount(); };
+    custom.oninput = updateCount;
+    updateCount();
   }
-  function startPublic() {
-    const { units, count, pool } = readPublic();
+  function startFromSetup() {
+    const { units, count, pool } = readSetup();
     if (!units.length || !count) return;
     const all = units.length === data.unitIds().length;
     const title = all ? 'All units' : units.length === 1 ? `Unit ${units[0]}` : `Units ${units.join(', ')}`;
     start(shuffle(pool.map((q) => q.id)).slice(0, count), title);
   }
-  const setUnits = (on) => { $$('input[name="f-units"]').forEach((el) => { el.checked = on; }); countPublic(); };
+  const setUnits = (on) => { $$('input[name="f-units"]').forEach((el) => { el.checked = on; }); updateCount(); };
 
   // ---------------------------------------------------------------- session
   function start(ids, title, options, replace) {
@@ -118,6 +75,7 @@
   const session = () => (store.session && store.session.kind === 'practice' ? store.session : null);
   const isOpen = (s) => s && s.index < s.ids.length && !s.stopped;
 
+  // After an answer: outcome, correct answer, explanation and the question number, nothing else.
   function feedbackHtml(q, answer, showOutcome = true) {
     const correct = answer === q.answer;
     let h = '<div class="feedback" role="status">';
@@ -125,20 +83,8 @@
       const label = answer === '?' ? 'No answer' : correct ? '✓ Correct' : '✗ Wrong';
       h += `<div class="outcome ${correct ? 'correct' : 'wrong'}">${label}</div>`;
     }
-    h += `<p><b>Correct answer: ${q.answer})</b> ${escapeHtml(q.options[q.answer])}${q.no_correct_option ? ' <span class="muted">(the least wrong)</span>' : ''}</p>
-      <p>${escapeHtml(q.explanation)}</p>`;
-    // Public edition: outcome, answer, explanation and the question number, nothing else.
-    if (data.isPublic()) return h + `<p class="muted" style="font-size:.85rem">Question ${escapeHtml(q.id)}</p></div>`;
-    h += `<p><b>Slides:</b> ${data.referencesHtml(q.references)}</p>`;
-    if (q.notes) h += `<p class="note ${q.status === 'weak' || q.no_correct_option ? '' : 'neutral'}"><b>Note:</b> ${escapeHtml(q.notes)}</p>`;
-    if (q.original_text || q.original_options) {
-      const opts = q.original_options || {};
-      h += `<details><summary>Original Italian wording</summary>${q.original_text ? `<p>${escapeHtml(q.original_text)}</p>` : ''}
-        ${Object.keys(opts).length ? '<ul>' + Object.keys(opts).map((k) => `<li>${k}) ${escapeHtml(opts[k])}</li>`).join('') + '</ul>' : ''}</details>`;
-    }
-    h += `<p>${data.badgesHtml(q)} <span class="muted" style="font-size:.85rem">bank no. ${escapeHtml(q.id)}</span></p>
-      <div class="actions" style="margin-top:6px"><button class="btn small" data-action="report" data-id="${escapeHtml(q.id)}">Report a problem</button></div></div>`;
-    return h;
+    return h + `<p><b>Correct answer: ${q.answer})</b> ${escapeHtml(q.options[q.answer])}${q.no_correct_option ? ' <span class="muted">(the least wrong)</span>' : ''}</p>
+      <p>${escapeHtml(q.explanation)}</p><p class="muted" style="font-size:.85rem">Question ${escapeHtml(q.id)}</p></div>`;
   }
 
   function quiz() {
@@ -163,7 +109,7 @@
       let cls = '';
       if (done) { if (letter === q.answer) cls = 'correct'; else if (letter === answer) cls = 'wrong'; }
       h += `<button class="option ${cls}" data-action="answer" data-letter="${letter}" ${done ? 'disabled' : ''}><span class="key">${k + 1}</span>
-        <span class="label">${escapeHtml(q.options[letter])}</span>${done ? `<span class="letter" title="${data.isPublic() ? 'Letter of this option' : 'Letter in the bank and in the answer key'}">${letter})</span>` : ''}</button>`;
+        <span class="label">${escapeHtml(q.options[letter])}</span>${done ? `<span class="letter" title="Letter of this option">${letter})</span>` : ''}</button>`;
     });
     h += '</div>';
     if (!done) {
@@ -231,19 +177,10 @@
   // ---------------------------------------------------------------- actions
   const idsWhere = (pred) => shuffle(data.active().filter(pred).map((q) => q.id));
   Object.assign(actions, {
-    'start-practice': () => {
-      if (data.isPublic()) { startPublic(); return; }
-      const o = readFilters();
-      let ids = filter(o).map((q) => q.id);
-      if ($('#f-order').value === 'random') ids = shuffle(ids);
-      const n = Number($('#f-count').value);
-      if (n) ids = ids.slice(0, n);
-      start(ids, o.topic || (o.unit ? `Unit ${o.unit}` : 'Practice'), { review: o.which === 'review' });
-    },
+    'start-practice': startFromSetup,
     'units-all': () => setUnits(true),
     'units-none': () => setUnits(false),
     'start-review': () => start(idsWhere((q) => progress.needsReview(q.id)), 'Review mistakes', { review: true }),
-    'start-exam-questions': () => start(idsWhere((q) => q.origin === 'exam'), 'Exam questions'),
     'start-flagged': () => start(idsWhere((q) => progress.isFlagged(q.id)), 'Flagged questions'),
     'redo-wrong': () => start(shuffle((session() && session().wrongIds) || []), 'Redo the wrong ones'),
     answer: (el) => answer(el.dataset.letter),
@@ -255,7 +192,6 @@
       el.setAttribute('aria-pressed', on);
       el.textContent = on ? '★ Flagged' : '☆ Flag';
     },
-    report: (el) => ui.reportProblem(el.dataset.id),
   });
 
   CNCT.practice = { start, answer, next, feedbackHtml, isOpen: () => isOpen(session()), isAnswered, currentOrder };
